@@ -70,20 +70,27 @@ def main(args):
 
     context_pairs, target_labels = generate_cbow_pairs(sequences, vocab_size, args.window_size)
 
-    # Create and compile the CBOW model
-    model = CBOW(vocab_size, args.embedding_dim, args.window_size)
-    model.compile(optimizer='adam', loss='categorical_crossentropy')
+    if os.path.exists(args.model_path):
+        # Load existing model.
+        model = tf.keras.models.load_model(args.model_path)
+        logging.info(f'Loaded model from: {args.model_path}')
+        model.summary()
+    else:
+        # Create and compile the CBOW model.
+        model = CBOW(vocab_size, args.embedding_dim, args.window_size)
+        model.compile(optimizer='adam', loss='categorical_crossentropy')
 
-    callbacks = []
-    if args.checkpoint:
-        checkpoint = ModelCheckpoint(args.model_path, monitor='loss', verbose=1, save_best_only=True, mode='min')
-        callbacks.append(checkpoint)
+    if args.epochs > 0:
+        callbacks = []
+        if args.checkpoint:
+            checkpoint = ModelCheckpoint(args.model_path, monitor='loss', verbose=1, save_best_only=True, mode='min')
+            callbacks.append(checkpoint)
 
-    # Train the model
-    model.fit(context_pairs, target_labels, epochs=args.epochs, batch_size=args.batch_size, callbacks=callbacks)
+        # Train the model
+        model.fit(context_pairs, target_labels, epochs=args.epochs, batch_size=args.batch_size, callbacks=callbacks)
 
-    if not args.checkpoint:
-        model.save(args.model_path)
+        if not args.checkpoint:
+            model.save(args.model_path)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Train CBOW Model')

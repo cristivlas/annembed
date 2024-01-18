@@ -7,9 +7,7 @@ import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
 from annoy import AnnoyIndex
-
 import tensorflow as tf
-from tensorflow.keras.layers import Embedding, Dense
 from tokenizer import Tokenizer
 
 def load_model_and_embeddings(model_path):
@@ -23,15 +21,22 @@ def load_text_file(file_path):
         lines = file.readlines()
     return [line.strip() for line in lines]
 
-def build_annoy_index(embeddings, num_trees):
+def build_annoy_index(embeddings, sequences, tfidf_scores, num_trees):
     embedding_dim = embeddings.shape[1]
     index = AnnoyIndex(embedding_dim, metric='angular')
 
-    for i, e in enumerate(embeddings):
-        index.add_item(i, e)
+    for i, seq in enumerate(sequences):
+        if seq:
+            weighted_embeddings = [embeddings[word_idx] * tfidf_scores.get(word_idx, 1) for word_idx in seq]
+            seq_embedding = np.mean(weighted_embeddings, axis=0)
+        else:
+            seq_embedding = np.zeros(embedding_dim)
+
+        index.add_item(i, seq_embedding)
 
     index.build(num_trees)
     return index
+
 
 def main(args):
     # Ensure all output paths exist.
@@ -45,9 +50,11 @@ def main(args):
     text_data = load_text_file(args.text_file)
     tokenizer = Tokenizer()
     tokenizer.fit_on_texts(text_data)
+    tokenizer.calculate_tfidf(text_data)  # Calculate TF-IDF scores
 
     # Build the Annoy index
-    annoy_index = build_annoy_index(embeddings, args.num_trees)
+    sequences = tokenizer.texts_to_sequences(text_data)
+    annoy_index = build_annoy_index(embeddings, sequences, tokenizer.idf, args.num_trees)
 
     tokenizer.save(args.tokenizer_output)
     logging.info(f'Saved tokenizer: {args.tokenizer_output}')
@@ -65,7 +72,7 @@ if __name__ == "__main__":
     parser.add_argument('--embeddings-output', default='data/embed.npy', help='Path to save model embeddings')
     parser.add_argument('--index-output', default='data/index.ann', help='Path to save the Annoy index')
     parser.add_argument('--tokenizer-output', default='data/tokenizer.pkl', help='Path to save the tokenizer')
-    parser.add_argument('--num-trees', type=int, default=100, help='Number of trees for Annoy index')
+    parser.add_argument('--num-trees', type=int, default=32, help='Number of trees for Annoy index')
     args = parser.parse_args()
 
     logging.basicConfig(level=logging.INFO)

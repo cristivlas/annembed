@@ -127,5 +127,17 @@ class TestTokenizer(unittest.TestCase):
             self.assertEqual(self.tokenizer.word_index, loaded_tokenizer.word_index)
             self.assertEqual(self.tokenizer.index_word, loaded_tokenizer.index_word)
 
+    def test_calculate_tfidf(self):
+        # Assuming 'Hello' appears in both texts and 'world', 'Python' appear in one text each
+        self.tokenizer.calculate_tfidf(["Hello world", "Hello Python"])
+
+        # IDF for 'Hello' should be lower since it appears in both documents
+        idf_hello = self.tokenizer.idf[self.tokenizer.word_index['hello']]
+        idf_world = self.tokenizer.idf[self.tokenizer.word_index['world']]
+        idf_python = self.tokenizer.idf[self.tokenizer.word_index['python']]
+
+        self.assertTrue(idf_hello < idf_world and idf_hello < idf_python,
+                        "IDF for 'hello' should be lower than 'world' and 'python'")
+
 if __name__ == '__main__':
     unittest.main()

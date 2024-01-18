@@ -1,6 +1,9 @@
 import logging
+import math
 import pickle
 import re
+
+from collections import defaultdict
 
 class Tokenizer:
     def __init__(self, regex=r'\b[\w]+\b', oov_token="<OOV>"):
@@ -35,3 +38,18 @@ class Tokenizer:
         logging.info(f'tokenizer: loading from "{file_path}"')
         with open(file_path, 'rb') as file:
             return pickle.load(file)
+
+    def calculate_tfidf(self, texts):
+        doc_count = defaultdict(int)
+        num_docs = len(texts)
+
+        for text in texts:
+            unique_words = set(self.tokenize(text))
+            for word in unique_words:
+                if word in self.word_index:
+                    doc_count[word] += 1
+
+        self.idf = {
+            self.word_index[word]: math.log(num_docs / (1 + freq))
+            for word, freq in doc_count.items()
+        }
