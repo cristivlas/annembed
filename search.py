@@ -30,14 +30,14 @@ def preprocess_and_embed(text_data, tokenizer, embeddings, tfidf_scores=None):
         # Use regular embeddings
         return [embeddings[seq[0]] if seq else np.zeros(embeddings.shape[1]) for seq in sequences]
 
-def search(query, embeddings, annoy_index, training_data, tokenizer, top_n=5):
+def search(query, embeddings, annoy_index, data, tokenizer, top_n=5):
     query_seq = tokenizer.texts_to_sequences([query])
     query_embedding = preprocess_and_embed([query], tokenizer, embeddings, tokenizer.idf)[0]
 
-    similar_indices = annoy_index.get_nns_by_vector(query_embedding, top_n)
+    similar_indices = annoy_index.get_nns_by_vector(query_embedding, top_n, include_distances=True)
     print("Top {} similar phrases for query '{}':".format(top_n, query))
-    for idx in similar_indices:
-        print(training_data[idx])
+    for idx, distance in zip(*similar_indices):
+        print(f'{data[idx]}, d={distance}')
 
 if __name__ == "__main__":
     class Formatter(argparse.ArgumentDefaultsHelpFormatter, argparse.RawDescriptionHelpFormatter):
