@@ -1,3 +1,4 @@
 annoy
+metaphone
 numpy
 tensorflow

@@ -3,12 +3,12 @@ import argparse
 import logging
 import numpy as np
 import os
+import pickle
 # https://stackoverflow.com/questions/35911252/disable-tensorflow-debugging-information
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
 from annoy import AnnoyIndex
 import tensorflow as tf
-from tokenizer import Tokenizer
 
 def load_model_and_embeddings(model_path):
     model = tf.keras.models.load_model(model_path)
@@ -20,6 +20,11 @@ def load_text_file(file_path):
     with open(file_path, 'r', encoding='utf-8') as file:
         lines = file.readlines()
     return [line.strip() for line in lines]
+
+def load_tokenizer(tokenizer_path):
+    with open(tokenizer_path, 'rb') as tokenizer_file:
+        tokenizer = pickle.load(tokenizer_file)
+    return tokenizer
 
 def build_annoy_index(embeddings, sequences, tfidf_scores, num_trees):
     embedding_dim = embeddings.shape[1]
@@ -40,24 +45,20 @@ def build_annoy_index(embeddings, sequences, tfidf_scores, num_trees):
 
 def main(args):
     # Ensure all output paths exist.
-    for path in [args.embeddings_output, args.index_output, args.tokenizer_output]:
+    for path in [args.embeddings_output, args.index_output]:
         os.makedirs(os.path.dirname(path), exist_ok=True)
 
     # Load the pre-trained CBOW model and embeddings
     model, embeddings = load_model_and_embeddings(args.model_path)
 
-    # Load and tokenize the training data
     text_data = load_text_file(args.text_file)
-    tokenizer = Tokenizer()
-    tokenizer.fit_on_texts(text_data)
-    tokenizer.calculate_tfidf(text_data)  # Calculate TF-IDF scores
+    tokenizer = load_tokenizer(args.tokenizer)
+    assert tokenizer.idf
 
     # Build the Annoy index
+    print('Building Index...')
     sequences = tokenizer.texts_to_sequences(text_data)
     annoy_index = build_annoy_index(embeddings, sequences, tokenizer.idf, args.num_trees)
-
-    tokenizer.save(args.tokenizer_output)
-    logging.info(f'Saved tokenizer: {args.tokenizer_output}')
 
     np.save(args.embeddings_output, embeddings)
     logging.info(f'Saved embedding: {args.embeddings_output}')
@@ -71,9 +72,12 @@ if __name__ == "__main__":
     parser.add_argument('--text-file', required=True, help='Path to the training text data')
     parser.add_argument('--embeddings-output', default='data/embed.npy', help='Path to save model embeddings')
     parser.add_argument('--index-output', default='data/index.ann', help='Path to save the Annoy index')
-    parser.add_argument('--tokenizer-output', default='data/tokenizer.pkl', help='Path to save the tokenizer')
+    parser.add_argument('--tokenizer', default='data/tokenizer.pkl', help='Path to pickled Tokenizer')
     parser.add_argument('--num-trees', type=int, default=32, help='Number of trees for Annoy index')
     args = parser.parse_args()
 
-    logging.basicConfig(level=logging.INFO)
-    main(args)
+    try:
+        logging.basicConfig(level=logging.INFO)
+        main(args)
+    except KeyboardInterrupt:
+        print()

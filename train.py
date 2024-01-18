@@ -59,12 +59,21 @@ def configure_logging(args):
     tf_logger.addHandler(logging.StreamHandler())  # Add the default Python logging handler
 
 def main(args):
+    # Ensure all output paths exist.
+    for path in [args.model_path, args.tokenizer_output]:
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+
     text_data = load_text_file(args.text_file)
 
-    tokenizer = Tokenizer()
+    tokenizer = Tokenizer(use_metaphone=args.use_metaphone)
     tokenizer.fit_on_texts(text_data)
+
     vocab_size = len(tokenizer.word_index) + 1  # Adding 1 because index 0 is reserved
     logging.info(f'vocab_size={vocab_size}')
+
+    tokenizer.calculate_tfidf(text_data)  # Calculate TF-IDF scores
+    tokenizer.save(args.tokenizer_output)
+    logging.info(f'Saved tokenizer: {args.tokenizer_output}')
 
     sequences = tokenizer.texts_to_sequences(text_data)
 
@@ -101,11 +110,14 @@ if __name__ == "__main__":
     parser.add_argument('--log-filename', default='log.txt', help='Log filename')
     parser.add_argument('--model-path', default='models/cbow', help='Path to save the trained model')
     parser.add_argument('--text-file', required=True, help='Path to the text file for training data')
-    parser.add_argument('--window-size', type=int, default=3, help='Number of neighboring words considered around a target word')
+    parser.add_argument('--tokenizer-output', default='data/tokenizer.pkl', help='Path to save the tokenizer')
+    parser.add_argument('--use-metaphone', action='store_true')
+    parser.add_argument('--window-size', type=int, default=3,
+                        help='Number of neighboring words considered around a target word')
     args = parser.parse_args()
 
-    configure_logging(args)
     try:
+        configure_logging(args)
         main(args)
     except KeyboardInterrupt:
         print()

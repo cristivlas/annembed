@@ -4,15 +4,17 @@ import pickle
 import re
 
 from collections import defaultdict
+from metaphone import doublemetaphone
 
 class Tokenizer:
-    def __init__(self, regex=r'\b[\w]+\b', oov_token="<OOV>"):
+    def __init__(self, *, regex=r'\b[\w]+\b', oov_token="<OOV>", use_metaphone=False):
         self.word_index = {oov_token: 1}
         self.index_word = {1: oov_token}
         self.regex = regex
+        self.use_metaphone = use_metaphone
 
     def tokenize(self, text):
-        return re.findall(self.regex, text.lower())
+        return [self.preprocess_word(w) for w in re.findall(self.regex, text.lower())]
 
     def fit_on_texts(self, texts):
         unique_words = set(word for text in texts for word in self.tokenize(text))
@@ -53,3 +55,6 @@ class Tokenizer:
             self.word_index[word]: math.log(num_docs / (1 + freq))
             for word, freq in doc_count.items()
         }
+
+    def preprocess_word(self, word):
+        return doublemetaphone(word)[0] if self.use_metaphone else word
