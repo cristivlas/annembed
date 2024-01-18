@@ -77,7 +77,7 @@ def main(args):
     callbacks = []
     if args.checkpoint:
         checkpoint = ModelCheckpoint(args.model_path, monitor='loss', verbose=1, save_best_only=True, mode='min')
-        callback.append(checkpoint)
+        callbacks.append(checkpoint)
 
     # Train the model
     model.fit(context_pairs, target_labels, epochs=args.epochs, batch_size=args.batch_size, callbacks=callbacks)
@@ -87,7 +87,7 @@ def main(args):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Train CBOW Model')
-    parser.add_argument('--batch-size', type=int, help='Batch size', default=256)
+    parser.add_argument('--batch-size', type=int, help='Batch size', default=64)
     parser.add_argument('--checkpoint', action='store_true', help='Use checkpoint callback')
     parser.add_argument('--embedding-dim', type=int, default=100, help='Dimension of embedding vector')
     parser.add_argument('--epochs', type=int, default=5, help='Number of epochs for training')
