@@ -102,11 +102,13 @@ def main(args):
             model.save(args.model_path)
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='Train CBOW Model')
-    parser.add_argument('--batch-size', type=int, help='Batch size', default=64)
+    class Formatter(argparse.ArgumentDefaultsHelpFormatter, argparse.RawDescriptionHelpFormatter):
+        ...
+    parser = argparse.ArgumentParser(description='Train CBOW Model', formatter_class=Formatter)
+    parser.add_argument('--batch-size', type=int, help='Batch size', default=256)
     parser.add_argument('--checkpoint', action='store_true', help='Use checkpoint callback')
     parser.add_argument('--embedding-dim', type=int, default=100, help='Dimension of embedding vector')
-    parser.add_argument('--epochs', type=int, default=5, help='Number of epochs for training')
+    parser.add_argument('--epochs', type=int, default=100, help='Number of epochs for training')
     parser.add_argument('--log-filename', default='log.txt', help='Log filename')
     parser.add_argument('--model-path', default='models/cbow', help='Path to save the trained model')
     parser.add_argument('--text-file', required=True, help='Path to the text file for training data')

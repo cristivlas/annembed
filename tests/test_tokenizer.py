@@ -139,5 +139,29 @@ class TestTokenizer(unittest.TestCase):
         self.assertTrue(idf_hello < idf_world and idf_hello < idf_python,
                         "IDF for 'hello' should be lower than 'world' and 'python'")
 
+    def test_compound_word_normalization(self):
+        # Test compound word normalization
+        self.tokenizer.fit_on_texts(["counter-gambit plays", "counter gambit strategies", "countergambit moves"])
+        normalized_index = self.tokenizer.word_index.get('countergambit')
+
+        # Check if different variations are normalized to 'countergambit'
+        sequences = self.tokenizer.texts_to_sequences(["counter-gambit", "counter gambit", "countergambit"])
+        expected_sequences = [[normalized_index], [normalized_index], [normalized_index]]
+
+        self.assertEqual(sequences, expected_sequences, "Compound word variations should be normalized to the same form")
+
+    def test_camel_case_splitting_and_tokenization(self):
+        tokenizer = Tokenizer()
+        tokenizer.fit_on_texts(["CaroKann Defense", "FriedLiver Attack", "King's Gambit"])
+
+        sequences = tokenizer.texts_to_sequences(["CaroKann", "FriedLiver", "King's"])
+        expected_sequences = [
+            [tokenizer.word_index.get('caro', 1), tokenizer.word_index.get('kann', 1)],  # 'CaroKann' -> 'caro', 'kann'
+            [tokenizer.word_index.get('fried', 1), tokenizer.word_index.get('liver', 1)],  # 'FriedLiver' -> 'fried', 'liver'
+            [tokenizer.word_index.get("king", 1)]  # "King's" -> 'king', 's' is filtered out
+        ]
+        self.assertEqual(sequences, expected_sequences, "Camel case words should be split and tokenized correctly")
+
+
 if __name__ == '__main__':
     unittest.main()

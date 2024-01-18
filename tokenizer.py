@@ -7,14 +7,25 @@ from collections import defaultdict
 from metaphone import doublemetaphone
 
 class Tokenizer:
-    def __init__(self, *, regex=r'\b[\w]+\b', oov_token="<OOV>", use_metaphone=False):
+    def __init__(self, *, regex=r'\b[\w]+\b', oov_token="<OOV>", use_metaphone=False, preprocess_text=None):
         self.word_index = {oov_token: 1}
         self.index_word = {1: oov_token}
         self.regex = regex
         self.use_metaphone = use_metaphone
+        self.preprocess_text = preprocess_text if preprocess_text else self.default_preprocessing
 
     def tokenize(self, text):
-        return [self.preprocess_word(w) for w in re.findall(self.regex, text.lower())]
+        def split_camel_case(word):
+            # Insert a space between lower and upper case letters
+            word = re.sub(r'(?<=[a-z])(?=[A-Z])', ' ', word)
+            return word
+
+        # Apply camel case splitting to the original text
+        split_words = split_camel_case(text)
+
+        # Then lowercase and tokenize
+        processed_words = re.findall(self.regex, split_words.lower())
+        return [self.preprocess_word(w) for w in processed_words]
 
     def fit_on_texts(self, texts):
         unique_words = set(word for text in texts for word in self.tokenize(text))
@@ -24,22 +35,35 @@ class Tokenizer:
             self.word_index[word] = i
             self.index_word[i] = word
 
+    @staticmethod
+    def default_preprocessing(text):
+        compound_word_map = {
+            r'counter[-\s]?gambit': 'countergambit'
+            # Add more mappings as needed
+        }
+        for pattern, replacement in compound_word_map.items():
+            text = re.sub(pattern, replacement, text, flags=re.IGNORECASE)
+        return text
+
     def texts_to_sequences(self, texts):
         def index(word):
             return self.word_index.get(word, 1)  # 1 is the index for OOV
-        return [[index(word) for word in self.tokenize(text) if len(word) > 1] for text in texts]
+
+        def tokenize_and_normalize(text):
+            normalized_text = self.preprocess_text(text)
+            return [index(word) for word in self.tokenize(normalized_text) if len(word) > 1]
+
+        return [tokenize_and_normalize(text) for text in texts]
 
     def sequences_to_texts(self, sequences):
         return [' '.join(self.index_word.get(i, '') for i in sequence) for sequence in sequences]
 
     def save(self, file_path):
-        logging.info(f'tokenizer: saving to "{file_path}"')
         with open(file_path, 'wb') as file:
             pickle.dump(self, file)
 
     @staticmethod
     def load(file_path):
-        logging.info(f'tokenizer: loading from "{file_path}"')
         with open(file_path, 'rb') as file:
             return pickle.load(file)
 

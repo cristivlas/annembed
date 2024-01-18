@@ -67,7 +67,9 @@ def main(args):
     logging.info(f'Saved index: {args.index_output}')
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='Build Annoy Index for CBOW Model')
+    class Formatter(argparse.ArgumentDefaultsHelpFormatter, argparse.RawDescriptionHelpFormatter):
+        ...
+    parser = argparse.ArgumentParser(description='Build Annoy Index for CBOW Model', formatter_class=Formatter)
     parser.add_argument('--model-path', default='models/cbow', help='Path to the pre-trained CBOW model')
     parser.add_argument('--text-file', required=True, help='Path to the training text data')
     parser.add_argument('--embeddings-output', default='data/embed.npy', help='Path to save model embeddings')

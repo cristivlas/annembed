@@ -40,7 +40,9 @@ def search(query, embeddings, annoy_index, training_data, tokenizer, top_n=5):
         print(training_data[idx])
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='Perform Similarity Search')
+    class Formatter(argparse.ArgumentDefaultsHelpFormatter, argparse.RawDescriptionHelpFormatter):
+        ...
+    parser = argparse.ArgumentParser(description='Perform Similarity Search', formatter_class=Formatter)
     parser.add_argument('--query', required=True, help='Query phrase')
     parser.add_argument('--embeddings', default='data/embed.npy', help='Path to pre-trained word embeddings (numpy file)')
     parser.add_argument('--annoy-index', default='data/index.ann', help='Path to Annoy index')
