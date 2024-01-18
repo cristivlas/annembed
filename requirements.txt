@@ -1,0 +1,3 @@
+annoy
+numpy
+tensorflow
