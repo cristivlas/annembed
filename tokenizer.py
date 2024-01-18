@@ -25,7 +25,9 @@ class Tokenizer:
             self.index_word[i] = word
 
     def texts_to_sequences(self, texts):
-        return [[self.word_index.get(word, 1) for word in self.tokenize(text)] for text in texts]
+        def index(word):
+            return self.word_index.get(word, 1)  # 1 is the index for OOV
+        return [[index(word) for word in self.tokenize(text) if len(word) > 1] for text in texts]
 
     def sequences_to_texts(self, sequences):
         return [' '.join(self.index_word.get(i, '') for i in sequence) for sequence in sequences]
