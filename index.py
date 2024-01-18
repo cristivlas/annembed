@@ -60,7 +60,7 @@ def main(args):
     sequences = tokenizer.texts_to_sequences(text_data)
     annoy_index = build_annoy_index(embeddings, sequences, tokenizer.idf, args.num_trees)
 
-    np.save(args.embeddings_output, embeddings)
+    np.save(args.embeddings_output, embeddings.astype(np.float16))
     logging.info(f'Saved embedding: {args.embeddings_output}')
 
     annoy_index.save(args.index_output)
@@ -75,7 +75,7 @@ if __name__ == "__main__":
     parser.add_argument('--embeddings-output', default='data/embed.npy', help='Path to save model embeddings')
     parser.add_argument('--index-output', default='data/index.ann', help='Path to save the Annoy index')
     parser.add_argument('--tokenizer', default='data/tokenizer.pkl', help='Path to pickled Tokenizer')
-    parser.add_argument('--num-trees', type=int, default=32, help='Number of trees for Annoy index')
+    parser.add_argument('--num-trees', type=int, default=16, help='Number of trees for Annoy index')
     args = parser.parse_args()
 
     try:

@@ -107,7 +107,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Train CBOW Model', formatter_class=Formatter)
     parser.add_argument('--batch-size', type=int, help='Batch size', default=256)
     parser.add_argument('--checkpoint', action='store_true', help='Use checkpoint callback')
-    parser.add_argument('--embedding-dim', type=int, default=100, help='Dimension of embedding vector')
+    parser.add_argument('--embedding-dim', type=int, default=32, help='Dimension of embedding vector')
     parser.add_argument('--epochs', type=int, default=100, help='Number of epochs for training')
     parser.add_argument('--log-filename', default='log.txt', help='Log filename')
     parser.add_argument('--model-path', default='models/cbow', help='Path to save the trained model')
