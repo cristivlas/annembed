@@ -32,7 +32,7 @@ def load_text_file(file_path):
     return [line.strip() for line in lines]
 
 def generate_cbow_pairs(sequences, vocab_size, window_size):
-    pairs, labels = [], []
+    context_windows, labels = [], []
     for sequence in sequences:
         length = len(sequence)
         for i, word in enumerate(sequence):
@@ -43,9 +43,9 @@ def generate_cbow_pairs(sequences, vocab_size, window_size):
                 if j != i and 0 <= j < length:
                     context[k] = sequence[j]
                     k += 1
-            pairs.append(context)
+            context_windows.append(context)
             labels.append(label)
-    return np.array(pairs), tf.keras.utils.to_categorical(labels, num_classes=vocab_size)
+    return np.array(context_windows), tf.keras.utils.to_categorical(labels, num_classes=vocab_size)
 
 def configure_logging(args):
     logging.basicConfig(

@@ -25,7 +25,7 @@ class Tokenizer:
 
         # Then lowercase and tokenize
         processed_words = re.findall(self.regex, split_words.lower())
-        return [self.preprocess_word(w) for w in processed_words]
+        return [x for w in processed_words for x in self.preprocess_word(w)]
 
     def fit_on_texts(self, texts):
         unique_words = set(word for text in texts for word in self.tokenize(text))
@@ -84,4 +84,4 @@ class Tokenizer:
         }
 
     def preprocess_word(self, word):
-        return doublemetaphone(word)[0] if self.use_metaphone else word
+        return doublemetaphone(word) if self.use_metaphone else [word]

@@ -8,6 +8,7 @@ import pickle
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
 from annoy import AnnoyIndex
+from utils import embed_sequence
 import tensorflow as tf
 
 def load_model_and_embeddings(model_path):
@@ -27,21 +28,13 @@ def load_tokenizer(tokenizer_path):
     return tokenizer
 
 def build_annoy_index(embeddings, sequences, tfidf_scores, num_trees):
-    embedding_dim = embeddings.shape[1]
-    index = AnnoyIndex(embedding_dim, metric='angular')
+    index = AnnoyIndex(embeddings.shape[1], metric='angular')
 
     for i, seq in enumerate(sequences):
-        if seq:
-            weighted_embeddings = [embeddings[word_idx] * tfidf_scores.get(word_idx, 1) for word_idx in seq]
-            seq_embedding = np.mean(weighted_embeddings, axis=0)
-        else:
-            seq_embedding = np.zeros(embedding_dim)
-
-        index.add_item(i, seq_embedding)
+         index.add_item(i, embed_sequence(seq, embeddings, tfidf_scores))
 
     index.build(num_trees)
     return index
-
 
 def main(args):
     # Ensure all output paths exist.

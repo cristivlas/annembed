@@ -10,7 +10,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '.'))
 import tokenizer
 
 from annoy import AnnoyIndex
-from os import path
+from utils import embed_sequence
 
 def load_embeddings(embeddings_path):
     return np.load(embeddings_path)
@@ -20,33 +20,22 @@ def load_tokenizer(tokenizer_path):
         tokenizer = pickle.load(tokenizer_file)
     return tokenizer
 
-def preprocess_and_embed(text_data, tokenizer, embeddings, tfidf_scores=None):
-    sequences = tokenizer.texts_to_sequences(text_data)
+def preprocess_and_embed(text_data, tokenizer, embeddings):
+    tfidf_scores = tokenizer.idf
+    assert tfidf_scores
 
-    if tfidf_scores:
-        # Use TF-IDF weighted embeddings
-        weighted_embeddings = []
-        for seq in sequences:
-            if seq:
-                weighted_seq = [embeddings[idx] * tfidf_scores.get(idx, 1) for idx in seq]
-                mean_weighted_seq = np.mean(weighted_seq, axis=0)
-                weighted_embeddings.append(mean_weighted_seq)
-            else:
-                weighted_embeddings.append(np.zeros(embeddings.shape[1]))
-        return weighted_embeddings
-    else:
-        # Use regular embeddings
-        return [embeddings[seq[0]] if seq else np.zeros(embeddings.shape[1]) for seq in sequences]
+    sequences = tokenizer.texts_to_sequences(text_data)
+    return [embed_sequence(s, embeddings, tfidf_scores) for s in sequences]
 
 class Index:
     def __init__(self, index_dir):
-        self.embeddings = load_embeddings(path.join(index_dir, 'data', 'embed.npy'))
+        self.embeddings = load_embeddings(os.path.join(index_dir, 'data', 'embed.npy'))
         self.index = AnnoyIndex(self.embeddings.shape[1], metric='angular')
-        self.index.load(path.join(index_dir, 'data', 'index.ann'))
-        self.tokenizer = load_tokenizer(path.join(index_dir, 'data', 'tokenizer.pkl'))
+        self.index.load(os.path.join(index_dir, 'data', 'index.ann'))
+        self.tokenizer = load_tokenizer(os.path.join(index_dir, 'data', 'tokenizer.pkl'))
 
     def search(self, query, *, max_distance=None, top_n=5, min_nodes=50):
-        query_embed = preprocess_and_embed([query], self.tokenizer, self.embeddings, self.tokenizer.idf)[0]
+        query_embed = preprocess_and_embed([query], self.tokenizer, self.embeddings)[0]
         k = max(min_nodes, top_n * self.index.get_n_trees())
         similar_indices = self.index.get_nns_by_vector(query_embed, n=top_n, search_k=k, include_distances=True)
         assert similar_indices is not None
@@ -54,7 +43,7 @@ class Index:
 
 def search(query, embeddings, annoy_index, data, tokenizer, top_n=5):
     query_seq = tokenizer.texts_to_sequences([query])
-    query_embedding = preprocess_and_embed([query], tokenizer, embeddings, tokenizer.idf)[0]
+    query_embedding = preprocess_and_embed([query], tokenizer, embeddings)[0]
 
     similar_indices = annoy_index.get_nns_by_vector(query_embedding, top_n, include_distances=True)
     print("Top {} similar phrases for query '{}':".format(top_n, query))
