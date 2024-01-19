@@ -2,7 +2,15 @@
 import argparse
 import numpy as np
 import pickle
+
+import os
+import sys
+# Hack: Ensure tokenizer module is found at unpickle time.
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '.')))
+import tokenizer
+
 from annoy import AnnoyIndex
+from os import path
 
 def load_embeddings(embeddings_path):
     return np.load(embeddings_path)
@@ -29,6 +37,20 @@ def preprocess_and_embed(text_data, tokenizer, embeddings, tfidf_scores=None):
     else:
         # Use regular embeddings
         return [embeddings[seq[0]] if seq else np.zeros(embeddings.shape[1]) for seq in sequences]
+
+class Index:
+    def __init__(self, index_dir):
+        self.embeddings = load_embeddings(path.join(index_dir, 'data', 'embed.npy'))
+        self.index = AnnoyIndex(self.embeddings.shape[1], metric='angular')
+        self.index.load(path.join(index_dir, 'data', 'index.ann'))
+        self.tokenizer = load_tokenizer(path.join(index_dir, 'data', 'tokenizer.pkl'))
+
+    def search(self, query, *, max_distance=None, top_n=5, min_nodes=50):
+        query_embed = preprocess_and_embed([query], self.tokenizer, self.embeddings, self.tokenizer.idf)[0]
+        k = max(min_nodes, top_n * self.index.get_n_trees())
+        similar_indices = self.index.get_nns_by_vector(query_embed, n=top_n, search_k=k, include_distances=True)
+        assert similar_indices is not None
+        return [(i,d) for i,d in zip(*similar_indices) if max_distance is None or d < max_distance]
 
 def search(query, embeddings, annoy_index, data, tokenizer, top_n=5):
     query_seq = tokenizer.texts_to_sequences([query])

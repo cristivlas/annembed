@@ -38,7 +38,8 @@ class Tokenizer:
     @staticmethod
     def default_preprocessing(text):
         compound_word_map = {
-            r'counter[-\s]?gambit': 'countergambit'
+            r'counter[-\s]?gambit': 'countergambit',
+            r'hyper[-\s]?accelerated': 'hyperaccelerated',
             # Add more mappings as needed
         }
         for pattern, replacement in compound_word_map.items():
