@@ -7,12 +7,12 @@ from collections import defaultdict
 from metaphone import doublemetaphone
 
 class Tokenizer:
-    def __init__(self, *, regex=r'\b[\w]+\b', oov_token="<OOV>", use_metaphone=False, preprocess_text=None):
+    def __init__(self, *, regex=r'\b[\w]+\b', oov_token="<OOV>", use_metaphone=False, post_process=None):
         self.word_index = {oov_token: 1}
         self.index_word = {1: oov_token}
         self.regex = regex
         self.use_metaphone = use_metaphone
-        self.preprocess_text = preprocess_text if preprocess_text else self.default_preprocessing
+        self.post_process= post_process if post_process else self.default_post_process
 
     def tokenize(self, text):
         def split_camel_case(word):
@@ -24,8 +24,13 @@ class Tokenizer:
         split_words = split_camel_case(text)
 
         # Then lowercase and tokenize
-        processed_words = re.findall(self.regex, split_words.lower())
-        return [x for w in processed_words for x in self.preprocess_word(w)]
+        tokens = [tok for tok in re.findall(self.regex, split_words.lower()) if len(tok) > 1]
+        tokens = self.post_process(tokens)
+
+        if self.use_metaphone:
+            tokens = [code for tok in tokens for code in doublemetaphone(tok) if code]
+
+        return tokens
 
     def fit_on_texts(self, texts):
         unique_words = set(word for text in texts for word in self.tokenize(text))
@@ -36,25 +41,31 @@ class Tokenizer:
             self.index_word[i] = word
 
     @staticmethod
-    def default_preprocessing(text):
+    def default_post_process(tokens):
         compound_word_map = {
-            r'counter[-\s]?gambit': 'countergambit',
-            r'hyper[-\s]?accelerated': 'hyperaccelerated',
+            ('counter', 'gambit'): 'countergambit',
+            ('hyper', 'accelerated'): 'hyperaccelerated',
+            ('ortho', 'schnapp'): 'orthoschnapp',
             # Add more mappings as needed
         }
-        for pattern, replacement in compound_word_map.items():
-            text = re.sub(pattern, replacement, text, flags=re.IGNORECASE)
-        return text
+        i = 0
+        while i < len(tokens) - 1:
+            pair = (tokens[i], tokens[i+1])
+            if pair in compound_word_map:
+                tokens[i] = compound_word_map[pair]
+                del tokens[i+1]
+            else:
+                i += 1
+        return tokens
 
     def texts_to_sequences(self, texts):
         def index(word):
             return self.word_index.get(word, 1)  # 1 is the index for OOV
 
-        def tokenize_and_normalize(text):
-            normalized_text = self.preprocess_text(text)
-            return [index(word) for word in self.tokenize(normalized_text) if len(word) > 1]
+        def tokenize_and_index(text):
+            return [index(word) for word in self.tokenize(text)]
 
-        return [tokenize_and_normalize(text) for text in texts]
+        return [tokenize_and_index(text) for text in texts]
 
     def sequences_to_texts(self, sequences):
         return [' '.join(self.index_word.get(i, '') for i in sequence) for sequence in sequences]
@@ -83,5 +94,3 @@ class Tokenizer:
             for word, freq in doc_count.items()
         }
 
-    def preprocess_word(self, word):
-        return doublemetaphone(word) if self.use_metaphone else [word]

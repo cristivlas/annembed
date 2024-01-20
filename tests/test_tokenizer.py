@@ -162,6 +162,36 @@ class TestTokenizer(unittest.TestCase):
         ]
         self.assertEqual(sequences, expected_sequences, "Camel case words should be split and tokenized correctly")
 
+class TestUseMetaphone(unittest.TestCase):
+
+    def test_metaphone_usage(self):
+        # Test that metaphone is used when use_metaphone is True
+        tokenizer = Tokenizer(use_metaphone=True)
+        input_text = "Example"
+        expected_output = ['AKSMPL']
+        self.assertEqual(tokenizer.tokenize(input_text), expected_output)
+
+    def test_metaphone_with_multiple_words(self):
+        # Test metaphone with multiple words
+        tokenizer = Tokenizer(use_metaphone=True)
+        input_text = "Multiple words OrthoSchnapp"
+        expected_output = ['MLTPL', 'ARTS', 'FRTS', 'AR0XNP', 'ARTXNP']
+        self.assertEqual(tokenizer.tokenize(input_text), expected_output)
+
+    def test_empty_string(self):
+        # Test behavior with an empty string
+        tokenizer = Tokenizer(use_metaphone=True)
+        input_text = ""
+        expected_output = []
+        self.assertEqual(tokenizer.tokenize(input_text), expected_output)
+
+    def test_metaphone_with_compound_word(self):
+        # Test metaphone with compound word processing
+        tokenizer = Tokenizer(use_metaphone=True)
+        input_text = "Counter gambit"
+        expected_output = ['KNTRKMPT']
+        self.assertEqual(tokenizer.tokenize(input_text), expected_output)
+
 
 if __name__ == '__main__':
     unittest.main()
