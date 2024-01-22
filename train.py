@@ -87,7 +87,7 @@ def main(args):
     else:
         # Create and compile the CBOW model.
         model = CBOW(vocab_size, args.embedding_dim, args.window_size)
-        model.compile(optimizer='adam', loss='categorical_crossentropy')
+        model.compile(optimizer='nadam', loss='categorical_crossentropy')
 
     if args.epochs > 0:
         callbacks = []
