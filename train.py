@@ -12,6 +12,7 @@ import tensorflow as tf
 from tensorflow.keras.callbacks import ModelCheckpoint
 from tensorflow.keras.layers import Embedding, Dense
 from tensorflow.keras.models import Model
+from tensorflow.keras.optimizers import Adam
 from tokenizer import Tokenizer
 
 class CBOW(Model):
@@ -87,7 +88,7 @@ def main(args):
     else:
         # Create and compile the CBOW model.
         model = CBOW(vocab_size, args.embedding_dim, args.window_size)
-        model.compile(optimizer='nadam', loss='categorical_crossentropy')
+        model.compile(optimizer=Adam(amsgrad=True), loss='categorical_crossentropy')
 
     if args.epochs > 0:
         callbacks = []
