@@ -15,27 +15,39 @@ from tensorflow.keras.models import Model
 from tensorflow.keras.optimizers import Adam
 from tokenizer import Tokenizer
 
+# https://machinelearningmastery.com/a-gentle-introduction-to-positional-encoding-in-transformer-models-part-1
+# https://medium.com/analytics-vidhya/understanding-positional-encoding-in-transformers-def92aca1dfe
+# https://towardsdatascience.com/master-positional-encoding-part-i-63c05d90a0c3
+
+def get_positional_encoding(max_seq_len, embed_dim):
+    positional_enc = np.array([
+        [pos / np.power(10000, 2 * (j // 2) / embed_dim) for j in range(embed_dim)]
+        for pos in range(max_seq_len)])
+    positional_enc[:, 0::2] = np.sin(positional_enc[:, 0::2])  # apply sin to even indices
+    positional_enc[:, 1::2] = np.cos(positional_enc[:, 1::2])  # apply cos to odd indices
+    return positional_enc
+
 class CBOW(Model):
-    """ Continuous Bag of Words. """
+    """ Continuous Bag of Words with Positional Encoding. """
     def __init__(self, vocab_size, embedding_dim, window_size, num_heads=4):
         super(CBOW, self).__init__()
-        # Validate the number of heads
         assert num_heads > 0
         assert embedding_dim % num_heads == 0, "num_heads must be a positive divisor of embedding_dim"
 
         self.embedding = Embedding(vocab_size, embedding_dim, input_length=2*window_size)
+        self.positional_encoding = get_positional_encoding(2*window_size, embedding_dim)
         self.multi_head_attention = MultiHeadAttention(num_heads=num_heads, key_dim=embedding_dim)
         self.layer_norm = LayerNormalization(epsilon=1e-6)
         self.global_average_pooling = GlobalAveragePooling1D()
         self.dense = Dense(vocab_size, activation='softmax')
 
     def call(self, context):
-        context_emb = self.embedding(context)  # Embedding layer.
+        context_emb = self.embedding(context)  # Embedding layer
+        context_emb += self.positional_encoding[:context.shape[1], :]  # Add positional encoding
         attention_output = self.multi_head_attention(context_emb, context_emb)  # Transformer block
         proj_input = self.layer_norm(context_emb + attention_output)
         pooled_output = self.global_average_pooling(proj_input)  # Global average pooling
         return self.dense(pooled_output)  # Final dense layer
-
 
 def load_text_file(file_path):
     with open(file_path, 'r', encoding='utf-8') as file:
