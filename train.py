@@ -10,22 +10,32 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
 import tensorflow as tf
 from tensorflow.keras.callbacks import ModelCheckpoint
-from tensorflow.keras.layers import Embedding, Dense
+from tensorflow.keras.layers import Embedding, Dense, MultiHeadAttention, GlobalAveragePooling1D, LayerNormalization
 from tensorflow.keras.models import Model
 from tensorflow.keras.optimizers import Adam
 from tokenizer import Tokenizer
 
 class CBOW(Model):
     """ Continuous Bag of Words. """
-    def __init__(self, vocab_size, embedding_dim, window_size):
+    def __init__(self, vocab_size, embedding_dim, window_size, num_heads=4):
         super(CBOW, self).__init__()
+        # Validate the number of heads
+        assert num_heads > 0
+        assert embedding_dim % num_heads == 0, "num_heads must be a positive divisor of embedding_dim"
+
         self.embedding = Embedding(vocab_size, embedding_dim, input_length=2*window_size)
+        self.multi_head_attention = MultiHeadAttention(num_heads=num_heads, key_dim=embedding_dim)
+        self.layer_norm = LayerNormalization(epsilon=1e-6)
+        self.global_average_pooling = GlobalAveragePooling1D()
         self.dense = Dense(vocab_size, activation='softmax')
 
     def call(self, context):
-        context_emb = self.embedding(context)
-        avg_emb = tf.reduce_mean(context_emb, axis=1)
-        return self.dense(avg_emb)
+        context_emb = self.embedding(context)  # Embedding layer.
+        attention_output = self.multi_head_attention(context_emb, context_emb)  # Transformer block
+        proj_input = self.layer_norm(context_emb + attention_output)
+        pooled_output = self.global_average_pooling(proj_input)  # Global average pooling
+        return self.dense(pooled_output)  # Final dense layer
+
 
 def load_text_file(file_path):
     with open(file_path, 'r', encoding='utf-8') as file:
@@ -84,7 +94,7 @@ def main(args):
         # Load existing model.
         model = tf.keras.models.load_model(args.model_path)
         logging.info(f'Loaded model from: {args.model_path}')
-        model.summary()
+        model.summary(line_length=120)
     else:
         # Create and compile the CBOW model.
         model = CBOW(vocab_size, args.embedding_dim, args.window_size)
