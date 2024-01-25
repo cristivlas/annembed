@@ -3,7 +3,6 @@ import argparse
 import numpy as np
 import logging
 import os
-import pickle
 
 # https://stackoverflow.com/questions/35911252/disable-tensorflow-debugging-information
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
